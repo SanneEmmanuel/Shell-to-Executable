@@ -1,0 +1,79 @@
+name: Build Sanne Script Compiler
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+
+  build-linux:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install GCC
+        run: |
+          sudo apt update
+          sudo apt install -y gcc
+
+      - name: Build Linux Binary
+        run: |
+          gcc compile.c -o compile
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: compile-linux
+          path: compile
+
+  build-windows:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            build-essential \
+            mingw-w64 \
+            git
+
+      - name: Clone TinyCC
+        run: |
+          git clone https://github.com/TinyCC/tinycc.git
+
+      - name: Build TinyCC
+        run: |
+          cd tinycc
+
+          ./configure \
+            --cpu=x86_64 \
+            --cross-prefix=x86_64-w64-mingw32-
+
+          make
+
+      - name: Build compile.exe
+        run: |
+
+          x86_64-w64-mingw32-gcc \
+            compile.c \
+            -Itinycc \
+            tinycc/libtcc.a \
+            -o compile.exe
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: compile-windows
+          path: compile.exe
