@@ -56,7 +56,6 @@ jobs:
         with:
           msystem: MINGW64
           update: true
-
           install: >
             git
             make
@@ -71,21 +70,23 @@ jobs:
         shell: msys2 {0}
         run: |
           cd tinycc
-
           ./configure
-
           make
 
       - name: Verify TinyCC Build
         shell: msys2 {0}
         run: |
           ls -lah tinycc
-          ls -lah tinycc/libtcc.a
 
       - name: Build compile.exe
         shell: msys2 {0}
         run: |
-          gcc compile.c tinycc/libtcc.a -o compile.exe
+          gcc compile.c tinycc/libtcc.dll -o compile.exe
+
+      - name: Copy TinyCC DLL
+        shell: msys2 {0}
+        run: |
+          cp tinycc/libtcc.dll .
 
       - name: Verify Windows Binary
         shell: msys2 {0}
@@ -97,4 +98,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: compile-windows
-          path: compile.exe
+          path: |
+            compile.exe
+            libtcc.dll
