@@ -63,7 +63,7 @@
 #ifdef _WIN32
 
 #include <windows.h>
-#include <libtcc.h>
+#include "tinycc/libtcc.h"
 
 #else
 
