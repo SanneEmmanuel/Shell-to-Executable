@@ -44,7 +44,7 @@
         gcc compile.c -o compile
 
     WINDOWS:
-        gcc compile.c -ltcc -o compile.exe
+        gcc compile.c tinycc/libtcc.a -o compile.exe
 
     NOTE
     ------------------------------------------------------------
@@ -73,8 +73,8 @@
 
 #endif
 
-#define MAX_CONTENT 65536
-#define MAX_PATH_LEN 1024
+#define MAX_CONTENT   65536
+#define MAX_PATH_LEN  1024
 
 /* ============================================================ */
 
@@ -160,6 +160,7 @@ void escape_string(
         }
         else if (*src == '\r')
         {
+            /* ignore */
         }
         else
         {
@@ -173,6 +174,10 @@ void escape_string(
 }
 
 /* ============================================================ */
+/* ======================= LINUX =============================== */
+/* ============================================================ */
+
+#ifndef _WIN32
 
 void compile_linux_script(
     const char *script_path
@@ -183,7 +188,9 @@ void compile_linux_script(
 
     if (!read_file(script_path, content))
     {
-        printf("FAILED: %s\n", script_path);
+        printf("FAILED TO READ: %s\n",
+               script_path);
+
         return;
     }
 
@@ -191,9 +198,13 @@ void compile_linux_script(
 
     char output[MAX_PATH_LEN];
 
-    strncpy(output,
-            script_path,
-            sizeof(output));
+    strncpy(
+        output,
+        script_path,
+        sizeof(output) - 1
+    );
+
+    output[sizeof(output) - 1] = '\0';
 
     remove_extension(output);
 
@@ -201,16 +212,19 @@ void compile_linux_script(
 
     if (!f)
     {
-        printf("Cannot create wrapper\n");
+        printf("FAILED TO CREATE WRAPPER\n");
         return;
     }
 
-    fprintf(f,
+    fprintf(
+        f,
+
         "#include <stdlib.h>\n"
         "int main(){\n"
         "system(\"bash -c \\\"%s\\\"\");\n"
         "return 0;\n"
         "}\n",
+
         escaped
     );
 
@@ -221,11 +235,16 @@ void compile_linux_script(
     snprintf(
         cmd,
         sizeof(cmd),
-        "gcc temp_wrapper.c -static -o \"%s\"",
+
+        "gcc temp_wrapper.c "
+        "-static "
+        "-o \"%s\"",
+
         output
     );
 
-    printf("COMPILING: %s\n", script_path);
+    printf("COMPILING: %s\n",
+           script_path);
 
     int result = system(cmd);
 
@@ -233,16 +252,22 @@ void compile_linux_script(
     {
         chmod(output, 0755);
 
-        printf("SUCCESS: %s\n", output);
+        printf("SUCCESS: %s\n",
+               output);
     }
     else
     {
-        printf("FAILED: %s\n", script_path);
+        printf("COMPILATION FAILED: %s\n",
+               script_path);
     }
 
     remove("temp_wrapper.c");
 }
 
+#endif
+
+/* ============================================================ */
+/* ====================== WINDOWS ============================== */
 /* ============================================================ */
 
 #ifdef _WIN32
@@ -256,7 +281,9 @@ void compile_windows_script(
 
     if (!read_file(script_path, content))
     {
-        printf("FAILED: %s\n", script_path);
+        printf("FAILED TO READ: %s\n",
+               script_path);
+
         return;
     }
 
@@ -264,9 +291,13 @@ void compile_windows_script(
 
     char output[MAX_PATH_LEN];
 
-    strncpy(output,
-            script_path,
-            sizeof(output));
+    strncpy(
+        output,
+        script_path,
+        sizeof(output) - 1
+    );
+
+    output[sizeof(output) - 1] = '\0';
 
     remove_extension(output);
 
@@ -276,28 +307,38 @@ void compile_windows_script(
 
     memset(code, 0, sizeof(code));
 
-    strcat(code,
+    strcat(
+        code,
+
         "#include <stdlib.h>\n"
         "int main(){\n"
-        "system(\"");
+        "system(\""
+    );
 
     if (ends_with(script_path, ".ps1"))
     {
-        strcat(code,
-            "powershell -Command \\\"");
+        strcat(
+            code,
+            "powershell -Command \\\""
+        );
     }
     else
     {
-        strcat(code,
-            "cmd /c \\\"");
+        strcat(
+            code,
+            "cmd /c \\\""
+        );
     }
 
     strcat(code, escaped);
 
-    strcat(code,
+    strcat(
+        code,
+
         "\\\"\");"
         "return 0;"
-        "}\n");
+        "}\n"
+    );
 
     TCCState *s;
 
@@ -305,7 +346,7 @@ void compile_windows_script(
 
     if (!s)
     {
-        printf("Cannot initialize TinyCC\n");
+        printf("FAILED TO INITIALIZE TinyCC\n");
         return;
     }
 
@@ -316,7 +357,7 @@ void compile_windows_script(
 
     if (tcc_compile_string(s, code) == -1)
     {
-        printf("Compile failed: %s\n",
+        printf("TinyCC COMPILE FAILED: %s\n",
                script_path);
 
         tcc_delete(s);
@@ -326,7 +367,7 @@ void compile_windows_script(
 
     if (tcc_output_file(s, output) == -1)
     {
-        printf("Output failed: %s\n",
+        printf("OUTPUT FAILED: %s\n",
                output);
 
         tcc_delete(s);
@@ -334,7 +375,8 @@ void compile_windows_script(
         return;
     }
 
-    printf("SUCCESS: %s\n", output);
+    printf("SUCCESS: %s\n",
+           output);
 
     tcc_delete(s);
 }
@@ -424,9 +466,10 @@ int main(
 )
 {
     printf("\n");
+
     printf("================================================\n");
-    printf("      SANNE SCRIPT COMPILER\n");
-    printf("      Author: Dr Sanne Karibo\n");
+    printf("        SANNE SCRIPT COMPILER\n");
+    printf("        Author: Dr Sanne Karibo\n");
     printf("================================================\n\n");
 
 #ifdef _WIN32
