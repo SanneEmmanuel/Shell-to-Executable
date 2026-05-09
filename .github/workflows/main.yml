@@ -11,6 +11,8 @@ jobs:
 
   linux-build:
 
+    name: Build Linux Binary
+
     runs-on: ubuntu-latest
 
     steps:
@@ -27,6 +29,11 @@ jobs:
         run: |
           gcc compile.c -o compile
 
+      - name: Verify Linux Binary
+        run: |
+          ls -lah
+          file compile
+
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -34,6 +41,8 @@ jobs:
           path: compile
 
   windows-build:
+
+    name: Build Windows Binary
 
     runs-on: windows-latest
 
@@ -50,8 +59,8 @@ jobs:
 
           install: >
             git
-            mingw-w64-x86_64-gcc
             make
+            mingw-w64-x86_64-gcc
 
       - name: Clone TinyCC
         shell: msys2 {0}
@@ -67,14 +76,22 @@ jobs:
 
           make
 
+      - name: Verify TinyCC Build
+        shell: msys2 {0}
+        run: |
+          ls -lah tinycc
+          ls -lah tinycc/libtcc.a
+
       - name: Build compile.exe
         shell: msys2 {0}
         run: |
+          gcc compile.c tinycc/libtcc.a -o compile.exe
 
-          gcc compile.c ^
-            -Itinycc ^
-            tinycc/libtcc.a ^
-            -o compile.exe
+      - name: Verify Windows Binary
+        shell: msys2 {0}
+        run: |
+          ls -lah
+          file compile.exe
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
